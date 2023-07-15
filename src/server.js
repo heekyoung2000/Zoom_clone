@@ -15,14 +15,31 @@ const handleListen = () => console.log("Listening on http://localhost:3000");
 const server = http.createServer(app); // http 서버
 const wss = new WebSocket.Server({ server }); // ws 서버
 
-wss.on("connection",(socket) =>{
+function onSocketClose(){
+    ()=>console.log("DisConnected to Browser❌");
+}
+
+const sockets = []; //배열로 만들어서 여러 브라우저에 메세지 전달
+
+
+wss.on("connection",(socket) =>{ //connection event listen
+    sockets.push(socket);//배열에 socket(브라우저) 넣어줌
+    socket["nickname"] = "Anon"; 
     console.log("Connected to Browwer✅");
-    socket.on("close",()=>console.log("DisConnected to Browser❌"));
-    socket.on("message",(message)=>{
-        console.log(message.toString());
+    socket.on("close",onSocketClose); //브라우저가닫히면 서버에서 나타남
+    socket.on("message", (msg)=>{
+        const message = JSON.parse(msg);
+        switch(message.type){
+            case "new_message":
+                sockets.forEach((aSocket)=> aSocket.send(`${socket.nickname}: ${message.payload}`));
+            case "nickname":
+                socket["nickname"] = message.payload;
+                
+        }
+        // socket.send(message.toString()); //브라우저에 메세지 전달
+        // sockets.forEach((aSocket)=> aSocket.send(message.toString())); // 각 브라우저에 메세지 전달
     });
-    socket.send("hello!!!");
-    
 });
 
 server.listen(3000, handleListen);
+
